@@ -1,0 +1,51 @@
+import requests, time, os
+from bs4 import BeautifulSoup
+
+TOKEN = os.environ.get("BOT_TOKEN")
+CHANNEL = "@mshsheen71" # قناتك
+
+KEYWORDS = ["دهان","جده","مكه","قطع غيار","اسفلت","تشغيل","فنادق","اعاشة","ازالة","تركيب","معدات","سيارات","بناء","هدم","تكسير","طب","صناعة","زراعة","مياه","انشاء","توريد","تجارة","صيانة","مقاولات"]
+
+seen = set()
+
+def send_to_telegram(text):
+    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+    requests.post(url, json={"chat_id": CHANNEL, "text": text})
+
+def check_daall():
+    # صفحة المنافسات المفتوحة في دال
+    url = "https://mnaqasat.daall.sa/tenders"
+    html = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}).text
+    soup = BeautifulSoup(html, 'html.parser')
+    
+    # هنقرا كل بطاقة منافسة
+    for card in soup.find_all("a", href=True):
+        title = card.get_text(strip=True)
+        if len(title) < 10:
+            continue
+        link = card['href']
+        if link in seen:
+            continue
+        
+        # هل فيها كلمة من كلماتك؟
+        for kw in KEYWORDS:
+            if kw in title:
+                msg = f"""📢 منافسة جديدة
+
+📝 {title}
+🔑 الكلمة: {kw}
+🔗 الرابط: https://mnaqasat.daall.sa{link}
+
+━━━━━━━━━━
+قناة منافسات مكة والمدينة"""
+                send_to_telegram(msg)
+                seen.add(link)
+                break
+
+print("البوت شغال...")
+while True:
+    try:
+        check_daall()
+    except Exception as e:
+        print(e)
+    time.sleep(600) # كل 10 دقايق
